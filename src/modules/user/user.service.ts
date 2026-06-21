@@ -1,0 +1,258 @@
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, Like } from 'typeorm';
+import * as bcrypt from 'bcrypt';
+import { User } from '../../entities/user.entity';
+import { Entreprise } from '../../entities/entreprise.entity';
+import { UserRole } from '../../common/enums';
+import { MailService } from '../mail/mail.service';
+import { NotificationService } from '../notification/notification.service';
+import { NotificationType } from '../../common/enums';
+
+@Injectable()
+export class UserService {
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(Entreprise)
+    private readonly entrepriseRepository: Repository<Entreprise>,
+    private readonly mailService: MailService,
+    private readonly notificationService: NotificationService,
+  ) {}
+
+  private async ensureEmailNotTaken(email: string, excludeId?: string): Promise<void> {
+    const existing = await this.userRepository.findOne({
+      where: { email },
+    });
+    if (existing && existing.id !== excludeId) {
+      throw new ConflictException('Un compte existe déjà avec cet email');
+    }
+  }
+
+  async createFormateur(dto: {
+    nom: string;
+    prenom: string;
+    email: string;
+    telephone?: string;
+    qualifications?: string;
+    specialites?: string;
+    biographie?: string;
+    disponibilites?: { jour: string; heureDebut: string; heureFin: string }[];
+    cvUrl?: string;
+  }): Promise<User> {
+    await this.ensureEmailNotTaken(dto.email);
+
+    const tempPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-2).toUpperCase();
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+    const username = dto.email.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '_');
+
+    const user = this.userRepository.create({
+      username,
+      email: dto.email,
+      password: hashedPassword,
+      role: UserRole.FORMATEUR,
+      isActive: true,
+      nom: dto.nom,
+      prenom: dto.prenom,
+      telephone: dto.telephone,
+      qualifications: dto.qualifications,
+      specialites: dto.specialites,
+      biographie: dto.biographie,
+      disponibilites: dto.disponibilites,
+      cvUrl: dto.cvUrl,
+    });
+    const saved = await this.userRepository.save(user);
+
+    await this.mailService.send({
+      to: saved.email,
+      subject: 'Bienvenue sur StirForma — Vos identifiants de connexion',
+      html: this.welcomeEmailHtml(saved, tempPassword, 'formateur'),
+    });
+
+    const admin = await this.userRepository.findOne({ where: { role: UserRole.ADMIN } });
+    if (admin) {
+      await this.notificationService.create({
+        type: NotificationType.NOUVEAU_FORMATEUR,
+        titre: `Nouveau formateur : ${saved.prenom} ${saved.nom}`,
+        message: `${saved.prenom} ${saved.nom} (${saved.email}) a été ajouté comme formateur.`,
+        userId: admin.id,
+      });
+    }
+
+    return saved;
+  }
+
+  async createParticipant(dto: {
+    nom: string;
+    prenom: string;
+    email: string;
+    telephone?: string;
+    poste?: string;
+    departement?: string;
+    entrepriseText?: string;
+    dateEmbauche?: string;
+    entrepriseId?: string;
+  }): Promise<User> {
+    await this.ensureEmailNotTaken(dto.email);
+
+    let entreprise: Entreprise | null = null;
+    if (dto.entrepriseId) {
+      entreprise = await this.entrepriseRepository.findOneBy({ id: dto.entrepriseId });
+    }
+
+    const tempPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-2).toUpperCase();
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+    const username = dto.email.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '_');
+
+    const user = this.userRepository.create({
+      username,
+      email: dto.email,
+      password: hashedPassword,
+      role: UserRole.PARTICIPANT,
+      isActive: true,
+      nom: dto.nom,
+      prenom: dto.prenom,
+      telephone: dto.telephone,
+      poste: dto.poste,
+      departement: dto.departement,
+      entrepriseText: dto.entrepriseText,
+      dateEmbauche: dto.dateEmbauche ? new Date(dto.dateEmbauche) : undefined,
+      entreprise: entreprise || undefined,
+    });
+    const saved = await this.userRepository.save(user);
+
+    await this.mailService.send({
+      to: saved.email,
+      subject: 'Bienvenue sur StirForma — Vos identifiants de connexion',
+      html: this.welcomeEmailHtml(saved, tempPassword, 'participant'),
+    });
+
+    const admin = await this.userRepository.findOne({ where: { role: UserRole.ADMIN } });
+    if (admin) {
+      await this.notificationService.create({
+        type: NotificationType.NOUVEL_INSCRIT,
+        titre: `Nouveau participant : ${saved.prenom} ${saved.nom}`,
+        message: `${saved.prenom} ${saved.nom} (${saved.email}) a été ajouté comme participant.`,
+        userId: admin.id,
+      });
+    }
+
+    return saved;
+  }
+
+  async findAllFormateurs(): Promise<User[]> {
+    const formateurs = await this.userRepository.find({
+      where: { role: UserRole.FORMATEUR },
+      relations: { entreprise: true, evaluationsRecues: true },
+    });
+    return formateurs.map((f) => {
+      const notes = f.evaluationsRecues?.filter((e) => e.note != null).map((e) => Number(e.note)) || [];
+      f.noteGlobale = notes.length ? parseFloat((notes.reduce((a, b) => a + b, 0) / notes.length).toFixed(2)) : 0;
+      return f;
+    });
+  }
+
+  async findAllParticipants(): Promise<User[]> {
+    return this.userRepository.find({
+      where: { role: UserRole.PARTICIPANT },
+      relations: { entreprise: true },
+    });
+  }
+
+  async findOne(id: string): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { id },
+      relations: { entreprise: true, notifications: true },
+    });
+    if (!user) throw new NotFoundException(`User #${id} not found`);
+    return user;
+  }
+
+  async findAll(): Promise<User[]> {
+    return this.userRepository.find({ relations: { entreprise: true } });
+  }
+
+  async create(dto: { username: string; email: string; password: string; role?: UserRole; isActive?: boolean }): Promise<User> {
+    const existing = await this.userRepository.findOne({
+      where: [{ username: dto.username }, { email: dto.email }],
+    });
+    if (existing) throw new ConflictException('Username or email already exists');
+
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const user = this.userRepository.create({
+      ...dto,
+      password: hashedPassword,
+      nom: dto.username,
+      prenom: '',
+    });
+    return this.userRepository.save(user);
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userRepository.findOneBy({ email });
+  }
+
+  async update(id: string, dto: Record<string, any>): Promise<User> {
+    const user = await this.findOne(id);
+    Object.assign(user, dto);
+    return this.userRepository.save(user);
+  }
+
+  async remove(id: string): Promise<void> {
+    const user = await this.findOne(id);
+    await this.userRepository.manager.transaction(async (manager) => {
+      await manager.query('DELETE FROM session_formateurs WHERE user_id = $1', [id]);
+      await manager.query('DELETE FROM session_participants WHERE user_id = $1', [id]);
+      await manager.delete(User, id);
+    });
+  }
+
+  private async generateIdentifiant(): Promise<string> {
+    const year = new Date().getFullYear().toString();
+    const [last] = await this.userRepository.find({
+      where: { identifiant: Like(`${year}STG%`) },
+      order: { identifiant: 'DESC' },
+      take: 1,
+    });
+
+    let nextNum = 1;
+    if (last?.identifiant) {
+      const match = last.identifiant.match(/(\d+)$/);
+      if (match) nextNum = parseInt(match[1]) + 1;
+    }
+
+    return `${year}STG${nextNum.toString().padStart(3, '0')}`;
+  }
+
+  private welcomeEmailHtml(user: User, tempPassword: string, role: string): string {
+    return `
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 560px; margin: auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+        <div style="background: #0a7c6e; padding: 28px 32px;">
+          <table><tr>
+            <td style="width: 40px; height: 40px; background: rgba(255,255,255,0.2); border-radius: 8px; text-align: center; vertical-align: middle; font-size: 22px; font-weight: 700; color: #fff;">F</td>
+            <td style="padding-left: 12px; font-size: 22px; font-weight: 700; color: #ffffff;">StirForma</td>
+          </tr></table>
+        </div>
+        <div style="padding: 36px 32px;">
+          <p style="margin: 0 0 8px; color: #374151; font-size: 15px;">Bonjour <strong style="color: #0a7c6e;">${user.prenom} ${user.nom}</strong>,</p>
+          <p style="margin: 0 0 20px; color: #374151; font-size: 15px; line-height: 1.6;">
+            Vous avez été ajouté en tant que <strong>${role}</strong> sur la plateforme StirForma.
+          </p>
+          <div style="background: #f3f4f6; border-radius: 8px; padding: 16px; margin: 20px 0;">
+            <p style="margin: 0 0 4px; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Identifiants de connexion</p>
+            <table style="font-size: 14px; color: #374151;">
+              <tr><td style="padding: 4px 8px 4px 0; color: #6b7280;">Email</td><td><strong>${user.email}</strong></td></tr>
+              <tr><td style="padding: 4px 8px 4px 0; color: #6b7280;">Mot de passe</td><td><strong>${tempPassword}</strong></td></tr>
+            </table>
+          </div>
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:8081'}/connexion" style="display: inline-block; background: #0a7c6e; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600;">Se connecter</a>
+          <p style="margin: 16px 0 0; color: #9ca3af; font-size: 12px;">Nous vous recommandons de changer votre mot de passe après la première connexion.</p>
+        </div>
+        <div style="background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 20px 32px; text-align: center;">
+          <p style="margin: 0; color: #9ca3af; font-size: 12px;">Cet email a été envoyé automatiquement depuis StirForma.</p>
+        </div>
+      </div>`;
+  }
+}
