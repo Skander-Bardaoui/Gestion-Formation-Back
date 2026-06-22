@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Res, Query } from '@nestjs/common';
 import { Response } from 'express';
 import { SessionService } from './session.service';
 import { CreateSessionDto } from './dto/create-session.dto';
@@ -24,8 +24,8 @@ export class SessionController {
 
   @Get('mine')
   @UseGuards(ManualJwtGuard)
-  findMine(@Req() req: any) {
-    return this.sessionService.findMySessions(req.user.sub, req.user.role);
+  findMine(@Req() req: any, @Query('type') type?: string) {
+    return this.sessionService.findMySessions(req.user.sub, req.user.role, type);
   }
 
   @Get(':id')

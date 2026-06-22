@@ -27,7 +27,10 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const user = await this.userRepository.findOne({
-      where: { email: dto.email },
+      where: [
+        { email: dto.email },
+        { username: dto.email },
+      ],
     });
     if (!user) throw new UnauthorizedException('Identifiants incorrects');
 
@@ -58,6 +61,7 @@ export class AuthService {
         nom: user.nom,
         prenom: user.prenom,
         telephone: user.telephone,
+        avatarUrl: user.avatarUrl,
       },
     };
   }
@@ -94,6 +98,7 @@ export class AuthService {
         nom: user.nom,
         prenom: user.prenom,
         telephone: user.telephone,
+        avatarUrl: user.avatarUrl,
       },
     };
   }
@@ -110,6 +115,7 @@ export class AuthService {
       nom: user.nom,
       prenom: user.prenom,
       telephone: user.telephone,
+      avatarUrl: user.avatarUrl,
     };
   }
 
@@ -200,6 +206,7 @@ export class AuthService {
       nom: user.nom,
       prenom: user.prenom,
       telephone: user.telephone,
+      avatarUrl: user.avatarUrl,
     };
   }
 
@@ -264,6 +271,14 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('Utilisateur introuvable');
     await this.userRepository.remove(user);
     return { message: 'Inscription rejetée et supprimée' };
+  }
+
+  async updateAvatar(userId: string, avatarUrl: string) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
+    user.avatarUrl = avatarUrl;
+    await this.userRepository.save(user);
+    return { avatarUrl };
   }
 
   async logout(userId: string) {

@@ -7,3 +7,5 @@ export * from './certificate.entity';
 export * from './notification.entity';
 export * from './evaluation.entity';
 export * from './employe.entity';
+export * from './inscription.entity';
+export * from './session-document.entity';

@@ -15,6 +15,7 @@ import { Employe } from './employe.entity';
 import { Presence } from './presence.entity';
 import { Certificate } from './certificate.entity';
 import { Evaluation } from './evaluation.entity';
+import { SessionDocument } from './session-document.entity';
 
 @Entity('sessions')
 export class Session {
@@ -53,6 +54,9 @@ export class Session {
 
   @Column({ type: 'int', default: 0 })
   nombreParticipants: number;
+
+  @Column({ type: 'int', nullable: true })
+  capaciteMax: number;
 
   @Column({ type: 'boolean', default: false })
   isCompleted: boolean;
@@ -99,6 +103,9 @@ export class Session {
 
   @OneToMany(() => Evaluation, (evaluation) => evaluation.session)
   evaluations: Evaluation[];
+
+  @OneToMany(() => SessionDocument, (doc) => doc.session)
+  documents: SessionDocument[];
 
   @CreateDateColumn()
   createdAt: Date;

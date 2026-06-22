@@ -8,6 +8,7 @@ import { User } from '../../entities/user.entity';
 import { Employe } from '../../entities/employe.entity';
 import { UserRole, NotificationType } from '../../common/enums';
 import { NotificationService } from '../notification/notification.service';
+import { InscriptionService } from '../inscription/inscription.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
 
@@ -23,6 +24,7 @@ export class SessionService {
     @InjectRepository(Employe)
     private readonly employeRepository: Repository<Employe>,
     private readonly notificationService: NotificationService,
+    private readonly inscriptionService: InscriptionService,
   ) {}
 
   async create(dto: CreateSessionDto): Promise<Session> {
@@ -115,53 +117,22 @@ export class SessionService {
     return this.sessionRepository.save(session);
   }
 
-  async enroll(sessionId: string, userId: string): Promise<Session> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user || user.role !== UserRole.PARTICIPANT) {
-      throw new BadRequestException('Seuls les participants peuvent s\'inscrire');
-    }
-
-    const session = await this.sessionRepository.findOne({
-      where: { id: sessionId },
-      relations: { participants: true, formation: true },
-    });
-    if (!session) throw new NotFoundException(`Session #${sessionId} not found`);
-
-    const alreadyEnrolled = session.participants.some((p) => p.id === user.id);
-    if (alreadyEnrolled) throw new ConflictException('Vous êtes déjà inscrit à cette session');
-
-    if (session.formation.capaciteMax && session.participants.length >= session.formation.capaciteMax) {
-      throw new BadRequestException('La session a atteint sa capacité maximale');
-    }
-
-    session.participants.push(user);
-    session.nombreParticipants = session.participants.length;
-    const saved = await this.sessionRepository.save(session);
-
-    const label = `"${session.formation?.titre}" du ${new Date(session.dateDebut).toLocaleDateString('fr-FR')}`;
-
-    await this.notificationService.create({
-      type: NotificationType.RAPPEL_SESSION,
-      titre: 'Inscription confirmée',
-      message: `Vous êtes inscrit à la session ${label}.`,
-      userId: user.id,
-      lienAction: '/mes-formations',
-    });
-
-    for (const formateur of session.formateurs || []) {
-      await this.notificationService.create({
-        type: NotificationType.RAPPEL_SESSION,
-        titre: 'Nouvel inscrit',
-        message: `${user.prenom} ${user.nom} s'est inscrit à la session ${label}.`,
-        userId: formateur.id,
-      });
-    }
-
-    return saved;
+  async enroll(sessionId: string, userId: string): Promise<{ message: string; inscription: any }> {
+    const inscription = await this.inscriptionService.create(userId, sessionId);
+    return {
+      message: 'Inscription soumise. Veuillez effectuer le paiement en espèces pour que l\'administration valide votre inscription.',
+      inscription,
+    };
   }
 
-  async findMySessions(userId: string, role: string): Promise<Session[]> {
+  async findMySessions(userId: string, role: string, type?: string): Promise<Session[]> {
     if (role === UserRole.FORMATEUR) {
+      if (type === 'enrolled') {
+        return this.sessionRepository.find({
+          where: { participants: { id: userId } },
+          relations: { formation: true, participants: true, formateurs: true },
+        });
+      }
       return this.sessionRepository.find({
         where: { formateurs: { id: userId } },
         relations: { formation: true, participants: true },

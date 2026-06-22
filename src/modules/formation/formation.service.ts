@@ -43,7 +43,10 @@ export class FormationService {
   async findOne(id: string): Promise<Formation> {
     const formation = await this.formationRepository.findOne({
       where: { id },
-      relations: { sessions: true, certificats: true },
+      relations: {
+        sessions: { participants: true, formateurs: true, employes: true },
+        certificats: true,
+      },
     });
     if (!formation) throw new NotFoundException(`Formation #${id} not found`);
     return formation;

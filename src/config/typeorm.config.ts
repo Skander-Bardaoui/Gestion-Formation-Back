@@ -8,6 +8,8 @@ import { Certificate } from '../entities/certificate.entity';
 import { Notification } from '../entities/notification.entity';
 import { Evaluation } from '../entities/evaluation.entity';
 import { Employe } from '../entities/employe.entity';
+import { Inscription } from '../entities/inscription.entity';
+import { SessionDocument } from '../entities/session-document.entity';
 
 export const typeOrmConfig: TypeOrmModuleOptions = {
   type: 'postgres',
@@ -26,7 +28,10 @@ export const typeOrmConfig: TypeOrmModuleOptions = {
     Notification,
     Evaluation,
     Employe,
+    Inscription,
+    SessionDocument,
   ],
+
   synchronize: process.env.NODE_ENV !== 'production',
   logging: process.env.NODE_ENV === 'development',
 };

@@ -17,7 +17,9 @@ import { EvaluationModule } from './modules/evaluation/evaluation.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { FormateurModule } from './modules/formateur/formateur.module';
 import { EmployeModule } from './modules/employe/employe.module';
+import { InscriptionModule } from './modules/inscription/inscription.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { SessionDocumentModule } from './modules/session-document/session-document.module';
 
 @Module({
   imports: [
@@ -35,7 +37,9 @@ import { TasksModule } from './modules/tasks/tasks.module';
     NotificationModule,
     EvaluationModule,
     AuthModule,
+    InscriptionModule,
     TasksModule,
+    SessionDocumentModule,
   ],
   controllers: [AppController],
   providers: [AppService, SeedService],

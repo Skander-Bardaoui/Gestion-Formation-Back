@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, IsArray, IsUUID, IsDateString } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsArray, IsUUID, IsDateString, IsInt, Min } from 'class-validator';
 
 export class CreateSessionDto {
   @IsDateString()
@@ -46,6 +46,11 @@ export class CreateSessionDto {
   @IsOptional()
   @IsBoolean()
   isCancelled?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  capaciteMax?: number;
 
   @IsOptional()
   @IsString()

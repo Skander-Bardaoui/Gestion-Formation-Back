@@ -84,6 +84,9 @@ export class User {
   @Column({ type: 'varchar', length: 500, nullable: true })
   cvUrl: string;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  avatarUrl: string;
+
   @Column({ type: 'decimal', precision: 3, scale: 2, default: 0 })
   noteGlobale: number;
 

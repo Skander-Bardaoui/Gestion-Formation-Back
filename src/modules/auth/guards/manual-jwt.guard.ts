@@ -7,11 +7,18 @@ export class ManualJwtGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
+    let token: string | null = null;
+
     const auth = request.headers.authorization;
-    if (!auth) throw new UnauthorizedException('No token');
+    if (auth) {
+      token = auth.split(' ')[1];
+    } else if (request.query.token) {
+      token = request.query.token as string;
+    }
+
+    if (!token) throw new UnauthorizedException('No token');
 
     try {
-      const token = auth.split(' ')[1];
       const payload = this.jwtService.verify(token);
       request.user = payload;
       return true;
