@@ -24,8 +24,8 @@ export class InscriptionService {
 
   async create(userId: string, sessionId: string): Promise<Inscription> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user || (user.role !== 'participant' && user.role !== 'formateur')) {
-      throw new BadRequestException('Seuls les participants et formateurs peuvent s\'inscrire');
+    if (!user || (user.role !== 'participant' && user.role !== 'employe' && user.role !== 'formateur')) {
+      throw new BadRequestException('Seuls les participants, employés et formateurs peuvent s\'inscrire');
     }
 
     const session = await this.sessionRepository.findOne({
@@ -147,21 +147,25 @@ export class InscriptionService {
     return saved;
   }
 
-  async reject(inscriptionId: string): Promise<void> {
+  async reject(inscriptionId: string): Promise<Inscription> {
     const inscription = await this.inscriptionRepository.findOne({
       where: { id: inscriptionId },
       relations: { user: true, session: { formation: true } },
     });
     if (!inscription) throw new NotFoundException('Inscription introuvable');
 
-    const label = `"${inscription.session.formation.titre}"`;
-    await this.inscriptionRepository.remove(inscription);
+    inscription.statutPaiement = StatutPaiement.REFUSE;
+    inscription.datePaiement = null;
+    const saved = await this.inscriptionRepository.save(inscription);
 
+    const label = `"${inscription.session.formation.titre}"`;
     await this.notificationService.create({
       type: NotificationType.RAPPEL_SESSION,
       titre: 'Inscription refusée',
       message: `Votre inscription à ${label} a été refusée.`,
       userId: inscription.userId,
     });
+
+    return saved;
   }
 }

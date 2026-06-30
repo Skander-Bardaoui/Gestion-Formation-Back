@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from '../../entities/user.entity';
+import { Employe } from '../../entities/employe.entity';
 import { UserRole } from '../../common/enums';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -20,18 +21,43 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Employe)
+    private readonly employeRepository: Repository<Employe>,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
     private readonly notificationService: NotificationService,
   ) {}
 
   async login(dto: LoginDto) {
-    const user = await this.userRepository.findOne({
+    let user = await this.userRepository.findOne({
       where: [
         { email: dto.email },
         { username: dto.email },
       ],
     });
+
+    if (!user) {
+      const employe = await this.employeRepository.findOne({ where: { identifiant: dto.email } });
+      if (employe) {
+        user = await this.userRepository.findOne({ where: { email: employe.email } });
+        if (!user) {
+          const hashedPassword = await bcrypt.hash(dto.password, 10);
+          const username = employe.email.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '_');
+          user = this.userRepository.create({
+            username,
+            email: employe.email,
+            password: hashedPassword,
+            role: UserRole.EMPLOYE,
+            isActive: true,
+            nom: employe.nom,
+            prenom: employe.prenom,
+            telephone: employe.telephone,
+          });
+          user = await this.userRepository.save(user);
+        }
+      }
+    }
+
     if (!user) throw new UnauthorizedException('Identifiants incorrects');
 
     const passwordValid = await bcrypt.compare(dto.password, user.password);

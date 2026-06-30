@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, EntityManager } from 'typeorm';
 import PDFDocument from 'pdfkit';
 import { Session } from '../../entities/session.entity';
 import { Formation } from '../../entities/formation.entity';
@@ -139,10 +139,28 @@ export class SessionService {
       });
     }
 
-    return this.sessionRepository.find({
+    const sessions = await this.sessionRepository.find({
       where: { participants: { id: userId } },
-      relations: { formation: true, formateurs: true },
+      relations: { formation: true, formateurs: true, employes: true },
     });
+
+    if (role === UserRole.EMPLOYE) {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (user) {
+        const employe = await this.employeRepository.findOne({ where: { email: user.email } });
+        if (employe) {
+          const employeSessions = await this.sessionRepository.find({
+            where: { employes: { id: employe.id } },
+            relations: { formation: true, formateurs: true, employes: true },
+          });
+          for (const s of employeSessions) {
+            if (!sessions.find((x) => x.id === s.id)) sessions.push(s);
+          }
+        }
+      }
+    }
+
+    return sessions;
   }
 
   async generatePresenceList(id: string): Promise<{ buffer: Buffer; titre: string }> {
@@ -236,7 +254,28 @@ export class SessionService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.sessionRepository.delete(id);
-    if (result.affected === 0) throw new NotFoundException(`Session #${id} not found`);
+    const em = this.sessionRepository.manager;
+    await em.transaction(async (tx) => {
+      const session = await tx.findOne(Session, {
+        where: { id },
+        relations: { presences: true, certificats: true, evaluations: true, documents: true },
+      });
+      if (!session) throw new NotFoundException(`Session #${id} not found`);
+
+      // Delete join table records first
+      await tx.query(`DELETE FROM session_participants WHERE session_id = $1`, [id]);
+      await tx.query(`DELETE FROM session_employes WHERE session_id = $1`, [id]);
+      await tx.query(`DELETE FROM session_formateurs WHERE session_id = $1`, [id]);
+
+      // Delete child entities
+      await tx.query(`DELETE FROM inscriptions WHERE "sessionId" = $1`, [id]);
+      await tx.query(`DELETE FROM presences WHERE "sessionId" = $1`, [id]);
+      await tx.query(`DELETE FROM certificates WHERE "sessionId" = $1`, [id]);
+      await tx.query(`DELETE FROM evaluations WHERE "sessionId" = $1`, [id]);
+      await tx.query(`DELETE FROM session_documents WHERE "sessionId" = $1`, [id]);
+
+      // Finally delete the session
+      await tx.delete(Session, id);
+    });
   }
 }

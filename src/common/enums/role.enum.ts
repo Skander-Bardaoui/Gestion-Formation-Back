@@ -3,4 +3,5 @@ export enum UserRole {
   SUPER_USER = 'super_user',
   PARTICIPANT = 'participant',
   FORMATEUR = 'formateur',
+  EMPLOYE = 'employe',
 }

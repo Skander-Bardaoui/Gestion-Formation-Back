@@ -20,6 +20,7 @@ import { EmployeModule } from './modules/employe/employe.module';
 import { InscriptionModule } from './modules/inscription/inscription.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { SessionDocumentModule } from './modules/session-document/session-document.module';
+import { ChatbotModule } from './modules/chatbot/chatbot.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { SessionDocumentModule } from './modules/session-document/session-docume
     InscriptionModule,
     TasksModule,
     SessionDocumentModule,
+    ChatbotModule,
   ],
   controllers: [AppController],
   providers: [AppService, SeedService],

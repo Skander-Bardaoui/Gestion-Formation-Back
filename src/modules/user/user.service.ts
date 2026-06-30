@@ -205,6 +205,13 @@ export class UserService {
     await this.userRepository.manager.transaction(async (manager) => {
       await manager.query('DELETE FROM session_formateurs WHERE user_id = $1', [id]);
       await manager.query('DELETE FROM session_participants WHERE user_id = $1', [id]);
+      await manager.query('DELETE FROM notifications WHERE "userId" = $1', [id]);
+      await manager.query('DELETE FROM presences WHERE "userId" = $1', [id]);
+      await manager.query('DELETE FROM evaluations WHERE "formateurId" = $1', [id]);
+      await manager.query('DELETE FROM evaluations WHERE "participantId" = $1', [id]);
+      await manager.query('DELETE FROM certificates WHERE "userId" = $1', [id]);
+      await manager.query('DELETE FROM session_documents WHERE "uploadedById" = $1', [id]);
+      await manager.query('DELETE FROM inscriptions WHERE "userId" = $1', [id]);
       await manager.delete(User, id);
     });
   }
