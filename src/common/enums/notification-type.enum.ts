@@ -7,4 +7,6 @@ export enum NotificationType {
   NOUVEL_INSCRIT = 'nouvel_inscrit',
   NOUVEAU_FORMATEUR = 'nouveau_formateur',
   SESSION_PROCHAINE = 'session_prochaine',
+  DOCUMENT_SIGNE = 'document_signe',
+  SIGNATURE_DEMANDEE = 'signature_demandee',
 }

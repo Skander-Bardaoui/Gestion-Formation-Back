@@ -9,3 +9,5 @@ export * from './evaluation.entity';
 export * from './employe.entity';
 export * from './inscription.entity';
 export * from './session-document.entity';
+export * from './signature.entity';
+export * from './document-signe.entity';

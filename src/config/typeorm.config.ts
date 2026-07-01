@@ -10,6 +10,8 @@ import { Evaluation } from '../entities/evaluation.entity';
 import { Employe } from '../entities/employe.entity';
 import { Inscription } from '../entities/inscription.entity';
 import { SessionDocument } from '../entities/session-document.entity';
+import { Signature } from '../entities/signature.entity';
+import { DocumentSigne } from '../entities/document-signe.entity';
 
 export const typeOrmConfig: TypeOrmModuleOptions = {
   type: 'postgres',
@@ -30,6 +32,8 @@ export const typeOrmConfig: TypeOrmModuleOptions = {
     Employe,
     Inscription,
     SessionDocument,
+    Signature,
+    DocumentSigne,
   ],
 
   synchronize: process.env.NODE_ENV !== 'production',

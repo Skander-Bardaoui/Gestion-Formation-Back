@@ -21,6 +21,7 @@ import { InscriptionModule } from './modules/inscription/inscription.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { SessionDocumentModule } from './modules/session-document/session-document.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
+import { SignatureModule } from './modules/signature/signature.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { ChatbotModule } from './modules/chatbot/chatbot.module';
     TasksModule,
     SessionDocumentModule,
     ChatbotModule,
+    SignatureModule,
   ],
   controllers: [AppController],
   providers: [AppService, SeedService],
