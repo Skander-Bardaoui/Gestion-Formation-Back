@@ -7,6 +7,7 @@ import {
   ManyToOne,
   ManyToMany,
   OneToMany,
+  JoinColumn,
 } from 'typeorm';
 import { UserRole } from '../common/enums';
 import { Entreprise } from './entreprise.entity';
@@ -85,6 +86,18 @@ export class User {
   cvUrl: string;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
+  programmeUrl: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  modeleCnfcppUrl: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  feuillePresenceUrl: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  attestationUrl: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
   avatarUrl: string;
 
   @Column({ type: 'decimal', precision: 3, scale: 2, default: 0 })
@@ -93,6 +106,19 @@ export class User {
   // --- Relations ---
   @ManyToOne(() => Entreprise, (entreprise) => entreprise.users, { nullable: true })
   entreprise: Entreprise;
+
+  @Column({ type: 'uuid', nullable: true })
+  cabinetId: string;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'cabinetId' })
+  cabinet: User;
+
+  @Column({ type: 'uuid', nullable: true })
+  clonedFromId: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  clonedFromCabinetId: string;
 
   @ManyToMany(() => Session, (session) => session.formateurs)
   sessionsAsFormateur: Session[];

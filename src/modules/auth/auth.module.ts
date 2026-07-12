@@ -9,6 +9,9 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { AdminGuard } from './guards/admin.guard';
 import { ManualJwtGuard } from './guards/manual-jwt.guard';
+import { CabinetGuard } from './guards/cabinet.guard';
+import { CabinetOrAdminGuard } from './guards/cabinet-or-admin.guard';
+import { OptionalJwtGuard } from './guards/optional-jwt.guard';
 import { MailModule } from '../mail/mail.module';
 import { NotificationModule } from '../notification/notification.module';
 
@@ -24,7 +27,7 @@ import { NotificationModule } from '../notification/notification.module';
     forwardRef(() => NotificationModule),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, AdminGuard, ManualJwtGuard],
-  exports: [AuthService, JwtModule, AdminGuard, ManualJwtGuard],
+  providers: [AuthService, JwtStrategy, AdminGuard, ManualJwtGuard, CabinetGuard, CabinetOrAdminGuard, OptionalJwtGuard],
+  exports: [AuthService, JwtModule, AdminGuard, ManualJwtGuard, CabinetGuard, CabinetOrAdminGuard, OptionalJwtGuard],
 })
 export class AuthModule {}

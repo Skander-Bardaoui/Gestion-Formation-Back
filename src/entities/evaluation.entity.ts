@@ -41,6 +41,47 @@ export class Evaluation {
   @Column({ type: 'boolean', default: false })
   isValidated: boolean;
 
+  // --- Champs du formulaire détaillé ---
+
+  @Column({ type: 'int', nullable: true })
+  noteObjectifClarte: number;
+
+  @Column({ type: 'int', nullable: true })
+  noteUtilite: number;
+
+  @Column({ type: 'int', nullable: true })
+  noteDureeRythme: number;
+
+  @Column({ type: 'int', nullable: true })
+  noteConfortSalle: number;
+
+  @Column({ type: 'int', nullable: true })
+  noteEquipements: number;
+
+  @Column({ type: 'int', nullable: true })
+  noteMaitriseSujet: number;
+
+  @Column({ type: 'int', nullable: true })
+  noteClarteExplications: number;
+
+  @Column({ type: 'int', nullable: true })
+  noteAnimation: number;
+
+  @Column({ type: 'int', nullable: true })
+  noteCapaciteReponse: number;
+
+  @Column({ type: 'int', nullable: true })
+  noteSatisfactionGlobale: number;
+
+  @Column({ type: 'text', nullable: true })
+  pointsForts: string;
+
+  @Column({ type: 'text', nullable: true })
+  pointsAmeliorer: string;
+
+  @Column({ type: 'int', nullable: true })
+  noteCfpStir: number;
+
   // Relations
   @ManyToOne(() => User, (user) => user.evaluationsRecues, { nullable: false })
   formateur: User;

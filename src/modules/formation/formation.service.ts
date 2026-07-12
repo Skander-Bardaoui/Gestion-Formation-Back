@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, FindOptionsWhere, IsNull } from 'typeorm';
 import { Formation } from '../../entities/formation.entity';
 import { User } from '../../entities/user.entity';
 import { UserRole, NotificationType } from '../../common/enums';
@@ -18,8 +18,12 @@ export class FormationService {
     private readonly notificationService: NotificationService,
   ) {}
 
-  async create(dto: CreateFormationDto): Promise<Formation> {
-    const formation = this.formationRepository.create(dto);
+  async create(dto: CreateFormationDto & { cabinetId?: string }): Promise<Formation> {
+    const cabinet = dto.cabinetId ? await this.userRepository.findOneBy({ id: dto.cabinetId }) : null;
+    const formation = this.formationRepository.create({
+      ...dto,
+      cabinet: cabinet || undefined,
+    });
     const saved = await this.formationRepository.save(formation);
 
     const all = await this.userRepository.find({ where: [{ role: UserRole.PARTICIPANT }, { role: UserRole.FORMATEUR }] });
@@ -36,8 +40,17 @@ export class FormationService {
     return saved;
   }
 
-  async findAll(): Promise<Formation[]> {
-    return this.formationRepository.find({ relations: { sessions: true } });
+  async findAll(cabinetId?: string): Promise<Formation[]> {
+    const where: FindOptionsWhere<Formation> = {};
+    if (cabinetId) {
+      where.cabinetId = cabinetId as any;
+    } else {
+      where.cabinetId = IsNull();
+    }
+    return this.formationRepository.find({
+      where,
+      relations: { sessions: true, cabinet: true },
+    });
   }
 
   async findOne(id: string): Promise<Formation> {
@@ -46,6 +59,7 @@ export class FormationService {
       relations: {
         sessions: { participants: true, formateurs: true, employes: true },
         certificats: true,
+        cabinet: true,
       },
     });
     if (!formation) throw new NotFoundException(`Formation #${id} not found`);
@@ -56,6 +70,28 @@ export class FormationService {
     const formation = await this.findOne(id);
     Object.assign(formation, dto);
     return this.formationRepository.save(formation);
+  }
+
+  async cloneForPlatform(id: string): Promise<Formation> {
+    const original = await this.findOne(id);
+    const clone = this.formationRepository.create({
+      titre: original.titre,
+      description: original.description,
+      objectifs: original.objectifs,
+      prerequis: original.prerequis,
+      categorie: original.categorie,
+      tarif: original.tarif,
+      type: original.type,
+      programme: original.programme,
+      dureeEnHeures: original.dureeEnHeures,
+      dureeEnJours: original.dureeEnJours,
+      capaciteMax: original.capaciteMax,
+      imageUrl: original.imageUrl,
+      supportsFormation: original.supportsFormation,
+      clonedFromId: id,
+      clonedFromCabinetId: original.cabinetId,
+    });
+    return this.formationRepository.save(clone);
   }
 
   async remove(id: string): Promise<void> {

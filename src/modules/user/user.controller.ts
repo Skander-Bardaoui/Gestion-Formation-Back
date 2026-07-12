@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateEmployeDto } from '../employe/dto/create-employe.dto';
+import { ManualJwtGuard } from '../auth/guards/manual-jwt.guard';
+import { AdminGuard } from '../auth/guards/admin.guard';
 
 @Controller('users')
 export class UserController {
@@ -26,6 +28,18 @@ export class UserController {
   @Post('participants')
   createParticipant(@Body() dto: CreateEmployeDto) {
     return this.userService.createParticipant(dto);
+  }
+
+  @UseGuards(ManualJwtGuard, AdminGuard)
+  @Get('cabinets')
+  findCabinets() {
+    return this.userService.findAllCabinets();
+  }
+
+  @UseGuards(ManualJwtGuard, AdminGuard)
+  @Post('cabinets')
+  createCabinet(@Body() dto: { nomCabinet: string; email: string; telephone?: string }) {
+    return this.userService.createCabinet(dto);
   }
 
   @Get(':id')

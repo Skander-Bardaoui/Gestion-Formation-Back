@@ -7,6 +7,7 @@ import {
   ManyToOne,
   ManyToMany,
   JoinTable,
+  JoinColumn,
   OneToMany,
 } from 'typeorm';
 import { Formation } from './formation.entity';
@@ -70,6 +71,19 @@ export class Session {
   // Relations
   @ManyToOne(() => Formation, (formation) => formation.sessions, { nullable: false })
   formation: Formation;
+
+  @Column({ type: 'uuid', nullable: true })
+  cabinetId: string;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'cabinetId' })
+  cabinet: User;
+
+  @Column({ type: 'uuid', nullable: true })
+  clonedFromId: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  clonedFromCabinetId: string;
 
   @ManyToMany(() => User, (user) => user.sessionsAsParticipant)
   @JoinTable({
