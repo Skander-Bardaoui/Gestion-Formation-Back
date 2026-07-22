@@ -120,6 +120,9 @@ export class User {
   @Column({ type: 'uuid', nullable: true })
   clonedFromCabinetId: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  clonedFromCabinetName: string;
+
   @ManyToMany(() => Session, (session) => session.formateurs)
   sessionsAsFormateur: Session[];
 

@@ -26,14 +26,16 @@ export class FormateurController {
 
   @Get()
   @UseGuards(OptionalJwtGuard)
-  async findAll(@Req() req: any, @Query('cabinetId') queryCabinetId?: string) {
+  async findAll(@Req() req: any, @Query('cabinetId') queryCabinetId?: string, @Query('all') all?: string) {
     let cabinetId: string | undefined;
-    if (queryCabinetId && typeof queryCabinetId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(queryCabinetId)) {
+    if (all === 'true') {
+      // return all formateurs (admin KPI use case)
+    } else if (queryCabinetId && typeof queryCabinetId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(queryCabinetId)) {
       cabinetId = queryCabinetId;
     } else if (req.user?.role === 'cabinet' && req.user?.email) {
       cabinetId = await this.userService.resolveCabinetId(req.user.email);
     }
-    return this.userService.findAllFormateurs(cabinetId);
+    return this.userService.findAllFormateurs(cabinetId, all === 'true');
   }
 
   @Get(':id')

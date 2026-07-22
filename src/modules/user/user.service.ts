@@ -228,9 +228,11 @@ export class UserService {
     return saved;
   }
 
-  async findAllFormateurs(cabinetId?: string): Promise<User[]> {
+  async findAllFormateurs(cabinetId?: string, all?: boolean): Promise<User[]> {
     const where: any = { role: UserRole.FORMATEUR };
-    if (cabinetId) {
+    if (all) {
+      // return all formateurs (admin KPI use case)
+    } else if (cabinetId) {
       where.cabinetId = cabinetId;
     } else {
       where.cabinetId = IsNull();
@@ -300,6 +302,11 @@ export class UserService {
 
   async cloneFormateurForPlatform(id: string): Promise<User> {
     const original = await this.findOne(id);
+    let cabinetName: string | null = null;
+    if (original.cabinetId) {
+      const cabinet = await this.userRepository.findOne({ where: { id: original.cabinetId }, select: { nom: true } });
+      cabinetName = cabinet?.nom ?? null;
+    }
     const baseEmail = original.email;
     let newEmail = baseEmail;
     let suffix = 0;
@@ -331,6 +338,7 @@ export class UserService {
       attestationUrl: original.attestationUrl,
       clonedFromId: id,
       clonedFromCabinetId: original.cabinetId,
+      clonedFromCabinetName: cabinetName,
     });
     const saved = await this.userRepository.save(clone);
 
@@ -354,6 +362,8 @@ export class UserService {
       await manager.query('DELETE FROM evaluations WHERE "participantId" = $1', [id]);
       await manager.query('DELETE FROM certificates WHERE "userId" = $1', [id]);
       await manager.query('DELETE FROM session_documents WHERE "uploadedById" = $1', [id]);
+      await manager.query('DELETE FROM signatures WHERE "userId" = $1', [id]);
+      await manager.query('UPDATE documents_signes SET "participantId" = NULL WHERE "participantId" = $1', [id]);
       await manager.query('DELETE FROM inscriptions WHERE "userId" = $1', [id]);
       await manager.delete(User, id);
     });

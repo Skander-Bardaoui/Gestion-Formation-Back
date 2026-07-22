@@ -5,6 +5,8 @@ import { Formation } from '../../entities/formation.entity';
 import { User } from '../../entities/user.entity';
 import { UserRole, NotificationType } from '../../common/enums';
 import { NotificationService } from '../notification/notification.service';
+import { MailService } from '../mail/mail.service';
+import { emailHtml } from '../../common/email-helper';
 import { CreateFormationDto } from './dto/create-formation.dto';
 import { UpdateFormationDto } from './dto/update-formation.dto';
 
@@ -16,6 +18,7 @@ export class FormationService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly notificationService: NotificationService,
+    private readonly mailService: MailService,
   ) {}
 
   async create(dto: CreateFormationDto & { cabinetId?: string }): Promise<Formation> {
@@ -26,23 +29,42 @@ export class FormationService {
     });
     const saved = await this.formationRepository.save(formation);
 
-    const all = await this.userRepository.find({ where: [{ role: UserRole.PARTICIPANT }, { role: UserRole.FORMATEUR }] });
-    for (const u of all) {
-      await this.notificationService.create({
-        type: NotificationType.NOUVELLE_FORMATION,
-        titre: `Nouvelle formation : ${saved.titre}`,
-        message: `La formation "${saved.titre}" a été ajoutée au catalogue.`,
-        userId: u.id,
-        lienAction: '/catalogue',
-      });
-    }
+    const all = await this.userRepository.find({
+      where: [{ role: UserRole.PARTICIPANT }, { role: UserRole.FORMATEUR }, { role: UserRole.EMPLOYE }],
+    });
+    await Promise.all(
+      all.map((u) =>
+        this.notificationService
+          .create({
+            type: NotificationType.NOUVELLE_FORMATION,
+            titre: `Nouvelle formation : ${saved.titre}`,
+            message: `La formation "${saved.titre}" a été ajoutée au catalogue.`,
+            userId: u.id,
+            lienAction: '/catalogue',
+          })
+          .then(() =>
+            this.mailService.send({
+              to: u.email,
+              subject: `Nouvelle formation : ${saved.titre}`,
+              html: emailHtml(
+                `Bonjour ${u.prenom} ${u.nom}`,
+                `Une nouvelle formation <strong>« ${saved.titre} »</strong> vient d'être ajoutée au catalogue.`,
+                '/catalogue',
+                'Voir la formation',
+              ),
+            }),
+          ),
+      ),
+    );
 
     return saved;
   }
 
-  async findAll(cabinetId?: string): Promise<Formation[]> {
+  async findAll(cabinetId?: string, all?: boolean): Promise<Formation[]> {
     const where: FindOptionsWhere<Formation> = {};
-    if (cabinetId) {
+    if (all) {
+      // return all formations (admin KPI use case)
+    } else if (cabinetId) {
       where.cabinetId = cabinetId as any;
     } else {
       where.cabinetId = IsNull();
@@ -90,6 +112,7 @@ export class FormationService {
       supportsFormation: original.supportsFormation,
       clonedFromId: id,
       clonedFromCabinetId: original.cabinetId,
+      clonedFromCabinetName: original.cabinet?.nom ?? null,
     });
     return this.formationRepository.save(clone);
   }

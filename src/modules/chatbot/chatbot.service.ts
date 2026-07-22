@@ -156,6 +156,72 @@ export class ChatbotService {
         const bestAvg = (best[1].notes.reduce((s, n) => s + n, 0) / best[1].notes.length).toFixed(2);
         parts.push(`Meilleur formateur: ${best[0]} (${bestAvg}/5)`);
       }
+
+      // --- KPI détaillés par session ---
+      const sessionsWithEvals = await this.sessionRepo.find({
+        relations: { formation: true, participants: true, employes: true, formateurs: true },
+        take: 50,
+      });
+      const evalsBySession = new Map<string, Evaluation[]>();
+      for (const ev of evaluations) {
+        const list = evalsBySession.get(ev.session?.id) ?? [];
+        list.push(ev);
+        evalsBySession.set(ev.session?.id, list);
+      }
+
+      const cabinetFields = ['noteObjectifClarte', 'noteContenu', 'noteUtilite', 'noteDureeRythme', 'noteConfortSalle', 'noteEquipements', 'noteSupports'];
+      const formateurFields = ['noteMaitriseSujet', 'noteClarteExplications', 'noteAnimation', 'noteCapaciteReponse'];
+
+      parts.push('--- KPI par session ---');
+      let totalTauxCabinet = 0; let totalTauxFormateur = 0; let totalTauxEval = 0; let totalTauxSatis = 0; let countKpi = 0;
+      for (const s of sessionsWithEvals) {
+        const sessionEvals = evalsBySession.get(s.id) ?? [];
+        if (sessionEvals.length === 0) continue;
+        const cabinetScores = sessionEvals.map((e: any) => {
+          const vals = cabinetFields.map(f => e[f]).filter((v: any) => v != null && !isNaN(Number(v)));
+          return vals.length ? vals.reduce((a: number, b: number) => a + Number(b), 0) / vals.length : null;
+        }).filter((v: any) => v != null);
+        const formateurScores = sessionEvals.map((e: any) => {
+          const vals = formateurFields.map(f => e[f]).filter((v: any) => v != null && !isNaN(Number(v)));
+          return vals.length ? vals.reduce((a: number, b: number) => a + Number(b), 0) / vals.length : null;
+        }).filter((v: any) => v != null);
+        const scoreCabinet = cabinetScores.length ? cabinetScores.reduce((a: number, b: number) => a + b, 0) / cabinetScores.length : 0;
+        const scoreFormateur = formateurScores.length ? formateurScores.reduce((a: number, b: number) => a + b, 0) / formateurScores.length : 0;
+        const scoreFormation = (scoreCabinet + scoreFormateur) / 2;
+        const tauxCabinet = Math.round((scoreCabinet / 4) * 100);
+        const tauxFormateur = Math.round((scoreFormateur / 4) * 100);
+        const tauxEval = Math.round((scoreFormation / 4) * 100);
+        const nbNotesSup4 = sessionEvals.filter((e: any) => (e.noteSatisfactionGlobale ?? e.note ?? 0) >= 4).length;
+        const tauxSatis = Math.round((nbNotesSup4 / sessionEvals.length) * 100);
+        const nbParticipants = (s.participants?.length || 0) + (s.employes?.length || 0);
+        const maxCap = s.capaciteMax;
+        const tauxParticipation = maxCap ? Math.round((nbParticipants / maxCap) * 100) : 'N/A';
+        const formateurNom = s.formateurs?.[0] ? `${s.formateurs[0].prenom} ${s.formateurs[0].nom}` : '—';
+        parts.push(`- Session "${s.formation?.titre || '?'}" (${new Date(s.dateDebut).toLocaleDateString('fr-FR')}): Taux Cabinet=${tauxCabinet}%, Taux Formateur=${tauxFormateur}%, Taux Évaluation=${tauxEval}%, Satisfaction=${tauxSatis}%, Participation=${tauxParticipation}${typeof tauxParticipation === 'number' ? '%' : ''}, Formateur: ${formateurNom}`);
+        totalTauxCabinet += tauxCabinet;
+        totalTauxFormateur += tauxFormateur;
+        totalTauxEval += tauxEval;
+        totalTauxSatis += tauxSatis;
+        countKpi++;
+      }
+      if (countKpi > 0) {
+        parts.push(`--- Moyennes KPI globales ---`);
+        parts.push(`Taux Cabinet moyen: ${Math.round(totalTauxCabinet / countKpi)}%`);
+        parts.push(`Taux Formateur moyen: ${Math.round(totalTauxFormateur / countKpi)}%`);
+        parts.push(`Taux Évaluation moyen: ${Math.round(totalTauxEval / countKpi)}%`);
+        parts.push(`Taux Satisfaction moyen: ${Math.round(totalTauxSatis / countKpi)}%`);
+      }
+      parts.push(`--- Seuils d'interprétation KPI ---`);
+      parts.push(`- ≥ 70% : Performant (Cabinet: Performant, Formateur: Retenu, Formation: Réussie)`);
+      parts.push(`- 40-69% : À améliorer`);
+      parts.push(`- < 40% : Non retenu (Cabinet: exclusion consultations, Formateur: exclusion 3 ans, Formation: révision complète)`);
+      parts.push(`--- Formules de calcul des KPI ---`);
+      parts.push(`Taux Cabinet = (moyenne des 7 critères cabinet par participant / 4) × 100. Critères: Objectif & Clarté, Contenu, Utilité, Rythme, Confort salle, Équipements, Supports. Chaque critère est noté de 1 à 4. Pour chaque participant on calcule la moyenne de ses 7 notes, puis on fait la moyenne de tous les participants de la session, puis on convertit en pourcentage (×25).`);
+      parts.push(`Taux Formateur = (moyenne des 4 critères formateur par participant / 4) × 100. Critères: Maîtrise du sujet, Clarté des explications, Animation, Capacité de réponse. Chaque critère est noté de 1 à 4. Même calcul que le taux cabinet.`);
+      parts.push(`Taux Évaluation = (moyenne du taux Cabinet et du taux Formateur). Note globale de la session.`);
+      parts.push(`Taux Satisfaction = (nombre d'évaluations avec note ≥ 4 / nombre total d'évaluations) × 100. La note prise en compte est d'abord noteSatisfactionGlobale, sinon la note générale.`);
+      parts.push(`Taux de Participation = (nombre d'inscrits / capacité maximale) × 100.`);
+      parts.push(`Taux de Réussite = (nombre d'évaluations avec score ≥ 60% / nombre total d'évaluations) × 100.`);
     }
 
     if (role === 'participant' || role === 'employe') {

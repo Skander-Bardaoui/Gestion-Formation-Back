@@ -43,9 +43,9 @@ export class FormationController {
 
   @Get()
   @UseGuards(OptionalJwtGuard)
-  async findAll(@Req() req: any, @Query('cabinetId') queryCabinetId?: string) {
+  async findAll(@Req() req: any, @Query('cabinetId') queryCabinetId?: string, @Query('all') all?: string) {
     const cabinetId = await this.resolveCabinetId(req, queryCabinetId);
-    return this.formationService.findAll(cabinetId);
+    return this.formationService.findAll(cabinetId, all === 'true');
   }
 
   @Get(':id')

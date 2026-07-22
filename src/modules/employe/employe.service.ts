@@ -155,16 +155,22 @@ export class EmployeService {
 
   private async generateIdentifiant(): Promise<string> {
     const year = new Date().getFullYear().toString();
-    const [last] = await this.employeRepository.find({
+
+    const maxEmploye = await this.employeRepository.findOne({
       where: { identifiant: Like(`${year}STG%`) },
       order: { identifiant: 'DESC' },
-      take: 1,
+    });
+
+    const maxUser = await this.userRepository.findOne({
+      where: { username: Like(`${year}STG%`) },
+      order: { username: 'DESC' },
     });
 
     let nextNum = 1;
-    if (last?.identifiant) {
-      const match = last.identifiant.match(/(\d+)$/);
-      if (match) nextNum = parseInt(match[1]) + 1;
+    const employeNum = maxEmploye?.identifiant?.match(/(\d+)$/)?.[1];
+    const userNum = maxUser?.username?.match(/(\d+)$/)?.[1];
+    if (employeNum || userNum) {
+      nextNum = Math.max(parseInt(employeNum || '0', 10), parseInt(userNum || '0', 10)) + 1;
     }
 
     return `${year}STG${nextNum.toString().padStart(3, '0')}`;

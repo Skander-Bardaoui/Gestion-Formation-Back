@@ -47,6 +47,7 @@ export class UserController {
     return this.userService.findOne(id);
   }
 
+  @UseGuards(ManualJwtGuard, AdminGuard)
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.userService.update(id, dto);

@@ -40,9 +40,9 @@ export class SessionController {
 
   @Get()
   @UseGuards(ManualJwtGuard)
-  async findAll(@Req() req: any, @Query('cabinetId') queryCabinetId?: string) {
+  async findAll(@Req() req: any, @Query('cabinetId') queryCabinetId?: string, @Query('all') all?: string) {
     const cabinetId = await this.resolveCabinetId(req, queryCabinetId);
-    return this.sessionService.findAll(cabinetId);
+    return this.sessionService.findAll(cabinetId, all === 'true');
   }
 
   @Get('mine')

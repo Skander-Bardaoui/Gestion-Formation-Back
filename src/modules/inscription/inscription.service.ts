@@ -90,6 +90,15 @@ export class InscriptionService {
     return this.inscriptionRepository.find({
       where: { statutPaiement: StatutPaiement.EN_ATTENTE },
       relations: { user: true, session: { formation: true } },
+      order: { dateInscription: 'DESC' },
+    });
+  }
+
+  async findAllConfirmed(): Promise<Inscription[]> {
+    return this.inscriptionRepository.find({
+      where: { statutPaiement: StatutPaiement.PAYE },
+      relations: { user: true, session: { formation: true } },
+      order: { datePaiement: 'DESC' },
     });
   }
 

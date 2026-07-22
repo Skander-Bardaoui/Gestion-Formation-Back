@@ -13,8 +13,8 @@ export class EvaluationController {
   }
 
   @Get()
-  findAll(@Query('formationId') formationId?: string, @Query('formateurId') formateurId?: string) {
-    return this.evaluationService.findAll(formationId, formateurId);
+  findAll(@Query('formationId') formationId?: string, @Query('formateurId') formateurId?: string, @Query('cabinetId') cabinetId?: string, @Query('sessionId') sessionId?: string, @Query('participantId') participantId?: string) {
+    return this.evaluationService.findAll(formationId, formateurId, cabinetId, sessionId, participantId);
   }
 
   @Get(':id')

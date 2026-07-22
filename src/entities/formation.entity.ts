@@ -89,6 +89,9 @@ export class Formation {
   @Column({ type: 'uuid', nullable: true })
   clonedFromCabinetId: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  clonedFromCabinetName: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

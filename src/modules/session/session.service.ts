@@ -8,7 +8,9 @@ import { User } from '../../entities/user.entity';
 import { Employe } from '../../entities/employe.entity';
 import { UserRole, NotificationType } from '../../common/enums';
 import { NotificationService } from '../notification/notification.service';
+import { MailService } from '../mail/mail.service';
 import { InscriptionService } from '../inscription/inscription.service';
+import { emailHtml } from '../../common/email-helper';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
 
@@ -24,6 +26,7 @@ export class SessionService {
     @InjectRepository(Employe)
     private readonly employeRepository: Repository<Employe>,
     private readonly notificationService: NotificationService,
+    private readonly mailService: MailService,
     private readonly inscriptionService: InscriptionService,
   ) {}
 
@@ -62,35 +65,55 @@ export class SessionService {
     const label = `"${formation.titre}" du ${new Date(dto.dateDebut).toLocaleDateString('fr-FR')} au ${new Date(dto.dateFin).toLocaleDateString('fr-FR')}`;
 
     const allUsers = await this.userRepository.find({
-      where: [{ role: UserRole.PARTICIPANT }, { role: UserRole.FORMATEUR }, { role: UserRole.ADMIN }],
+      where: [{ role: UserRole.PARTICIPANT }, { role: UserRole.FORMATEUR }, { role: UserRole.EMPLOYE }, { role: UserRole.ADMIN }],
     });
 
-    for (const u of allUsers) {
-      const isParticipant = u.role === UserRole.PARTICIPANT;
-      const isFormateur = u.role === UserRole.FORMATEUR;
-      const isAdmin = u.role === UserRole.ADMIN;
+    await Promise.all(
+      allUsers.map((u) => {
+        const isParticipant = u.role === UserRole.PARTICIPANT;
+        const isFormateur = u.role === UserRole.FORMATEUR;
 
-      await this.notificationService.create({
-        type: NotificationType.SESSION_PROCHAINE,
-        titre: isFormateur
-          ? `Session à animer : ${formation.titre}`
-          : `Nouvelle session : ${formation.titre}`,
-        message: isParticipant
-          ? `Une nouvelle session ${label} est disponible. Inscrivez-vous dès maintenant !`
-          : isFormateur
-            ? `Une nouvelle session ${label} a été créée.`
-            : `Une nouvelle session ${label} a été créée.`,
-        userId: u.id,
-        lienAction: isParticipant ? '/catalogue' : isFormateur ? '/formateur/dashboard' : '/admin/sessions',
-      });
-    }
+        return this.notificationService
+          .create({
+            type: NotificationType.SESSION_PROCHAINE,
+            titre: isFormateur
+              ? `Session à animer : ${formation.titre}`
+              : `Nouvelle session : ${formation.titre}`,
+            message: isParticipant
+              ? `Une nouvelle session ${label} est disponible. Inscrivez-vous dès maintenant !`
+              : `Une nouvelle session ${label} a été créée.`,
+            userId: u.id,
+            lienAction: isParticipant ? '/catalogue' : isFormateur ? '/formateur/dashboard' : '/catalogue',
+          })
+          .then(() =>
+            this.mailService.send({
+              to: u.email,
+              subject: isFormateur
+                ? `Session à animer : ${formation.titre}`
+                : `Nouvelle session : ${formation.titre}`,
+              html: emailHtml(
+                `Bonjour ${u.prenom} ${u.nom}`,
+                isParticipant
+                  ? `Une nouvelle session ${label} est disponible. Inscrivez-vous dès maintenant !`
+                  : isFormateur
+                    ? `Vous avez été assigné à la session ${label}.`
+                    : `Une nouvelle session ${label} a été créée.`,
+                isParticipant ? '/catalogue' : isFormateur ? '/formateur/dashboard' : '/catalogue',
+                'Voir les détails',
+              ),
+            }),
+          );
+      }),
+    );
 
     return saved;
   }
 
-  async findAll(cabinetId?: string): Promise<Session[]> {
+  async findAll(cabinetId?: string, all?: boolean): Promise<Session[]> {
     const where: FindOptionsWhere<Session> = {};
-    if (cabinetId) {
+    if (all) {
+      // return all sessions (admin KPI use case)
+    } else if (cabinetId) {
       where.cabinetId = cabinetId as any;
     } else {
       where.cabinetId = IsNull();
@@ -268,6 +291,9 @@ export class SessionService {
 
   async cloneForPlatform(id: string): Promise<Session> {
     const original = await this.findOne(id);
+    const platformFormation = await this.formationRepository.findOne({
+      where: { clonedFromId: original.formation.id },
+    });
     const clone = this.sessionRepository.create({
       dateDebut: original.dateDebut,
       dateFin: original.dateFin,
@@ -277,9 +303,10 @@ export class SessionService {
       salle: original.salle,
       nombreParticipants: 0,
       capaciteMax: original.capaciteMax,
-      formation: original.formation,
+      formation: platformFormation || original.formation,
       clonedFromId: id,
       clonedFromCabinetId: original.cabinetId,
+      clonedFromCabinetName: original.cabinet?.nom ?? null,
     });
     return this.sessionRepository.save(clone);
   }
@@ -299,6 +326,7 @@ export class SessionService {
       await tx.query(`DELETE FROM session_formateurs WHERE session_id = $1`, [id]);
 
       // Delete child entities
+      await tx.query(`DELETE FROM documents_signes WHERE "sessionId" = $1`, [id]);
       await tx.query(`DELETE FROM inscriptions WHERE "sessionId" = $1`, [id]);
       await tx.query(`DELETE FROM presences WHERE "sessionId" = $1`, [id]);
       await tx.query(`DELETE FROM certificates WHERE "sessionId" = $1`, [id]);

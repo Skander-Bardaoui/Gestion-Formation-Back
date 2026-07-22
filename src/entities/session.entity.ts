@@ -85,6 +85,9 @@ export class Session {
   @Column({ type: 'uuid', nullable: true })
   clonedFromCabinetId: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  clonedFromCabinetName: string;
+
   @ManyToMany(() => User, (user) => user.sessionsAsParticipant)
   @JoinTable({
     name: 'session_participants',

@@ -7,6 +7,7 @@ import { FormationController } from './formation.controller';
 import { FormationService } from './formation.service';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationModule } from '../notification/notification.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { NotificationModule } from '../notification/notification.module';
     MulterModule.register({}),
     AuthModule,
     NotificationModule,
+    MailModule,
   ],
   controllers: [FormationController],
   providers: [FormationService],

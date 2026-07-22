@@ -9,9 +9,10 @@ import { SessionService } from './session.service';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationModule } from '../notification/notification.module';
 import { InscriptionModule } from '../inscription/inscription.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Session, Formation, User, Employe]), AuthModule, NotificationModule, InscriptionModule],
+  imports: [TypeOrmModule.forFeature([Session, Formation, User, Employe]), AuthModule, NotificationModule, InscriptionModule, MailModule],
   controllers: [SessionController],
   providers: [SessionService],
   exports: [SessionService],

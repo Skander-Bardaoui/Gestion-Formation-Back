@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Evaluation } from '../../entities/evaluation.entity';
@@ -28,6 +28,11 @@ export class EvaluationService {
     const participant = await this.userRepository.findOneBy({ id: dto.participantId });
     if (!participant) throw new NotFoundException(`Participant #${dto.participantId} not found`);
 
+    const existing = await this.evaluationRepository.findOne({
+      where: { session: { id: dto.sessionId }, participant: { id: dto.participantId } },
+    });
+    if (existing) throw new ConflictException('Vous avez déjà évalué cette session');
+
     const evaluation = this.evaluationRepository.create({
       ...dto,
       dateEvaluation: new Date(dto.dateEvaluation),
@@ -38,10 +43,13 @@ export class EvaluationService {
     return this.evaluationRepository.save(evaluation);
   }
 
-  async findAll(formationId?: string, formateurId?: string): Promise<Evaluation[]> {
+  async findAll(formationId?: string, formateurId?: string, cabinetId?: string, sessionId?: string, participantId?: string): Promise<Evaluation[]> {
     const where: any = {};
-    if (formationId) where.session = { formation: { id: formationId } };
+    if (formationId) where.session = { ...where.session, formation: { id: formationId } };
     if (formateurId) where.formateur = { id: formateurId };
+    if (cabinetId) where.session = { ...where.session, cabinetId };
+    if (sessionId) where.session = { ...where.session, id: sessionId };
+    if (participantId) where.participant = { id: participantId };
     return this.evaluationRepository.find({
       where,
       relations: { formateur: true, session: { formation: true }, participant: true },

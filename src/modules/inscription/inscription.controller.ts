@@ -13,6 +13,12 @@ export class InscriptionController {
     return this.inscriptionService.findAllPending();
   }
 
+  @Get('confirmed')
+  @UseGuards(ManualJwtGuard, AdminGuard)
+  findConfirmed() {
+    return this.inscriptionService.findAllConfirmed();
+  }
+
   @Get('mine')
   @UseGuards(ManualJwtGuard)
   findMine(@Req() req: any) {
