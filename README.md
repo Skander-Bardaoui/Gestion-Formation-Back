@@ -1,111 +1,124 @@
-# StirForma
+<div align="center">
+  <br/>
+  <h1>StirForma</h1>
+  <p><strong>Plateforme de gestion de formations professionnelles</strong></p>
 
-Plateforme de gestion de formations professionnelles avec authentification, catalogues, inscriptions, évaluations, signatures électroniques et génération de documents.
+  <p>
+    <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React"/>
+    <img src="https://img.shields.io/badge/TanStack_Start-FF4154?style=for-the-badge&logo=react-query&logoColor=white" alt="TanStack Start"/>
+    <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS"/>
+    <img src="https://img.shields.io/badge/shadcn%2Fui-000000?style=for-the-badge&logo=shadcnui&logoColor=white" alt="shadcn/ui"/>
+  </p>
+
+  <p>
+    <img src="https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white" alt="NestJS"/>
+    <img src="https://img.shields.io/badge/TypeORM-262627?style=for-the-badge&logo=typeorm&logoColor=orange" alt="TypeORM"/>
+    <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL"/>
+    <img src="https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=json-web-tokens&logoColor=white" alt="JWT"/>
+  </p>
+
+  <p>
+    <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"/>
+    <img src="https://img.shields.io/badge/bun-282a36?style=for-the-badge&logo=bun&logoColor=fbf0df" alt="Bun"/>
+    <img src="https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white" alt="npm"/>
+  </p>
+
+  <br/>
+</div>
+
+---
+
+## Présentation
+
+StirForma est une solution complète de gestion de formations professionnelles. Elle couvre l'intégralité du cycle de vie d'une formation : de la création du catalogue à l'émission des certificats, en passant par les inscriptions, les évaluations, la gestion des présences et la signature électronique des documents.
 
 ---
 
 ## Architecture
 
+<div align="center">
+
 | Couche | Technologie |
 |---|---|
-| Frontend | TanStack Start + React 19 + Tailwind CSS v4 + shadcn/ui |
-| Backend | NestJS + TypeORM + PostgreSQL |
-| Auth | JWT (access 15min + refresh 7 jours) |
+| **Frontend** | TanStack Start + React 19 + Tailwind CSS v4 + shadcn/ui |
+| **Backend** | NestJS + TypeORM + PostgreSQL |
+| **Authentification** | JWT (access token 15 min, refresh token 7 jours) |
+|
+
+</div>
+
+<br/>
+
+```mermaid
+graph LR
+    A[Client Browser] --> B[TanStack Start SSR]
+    B --> C[NestJS API :3001]
+    C --> D[PostgreSQL]
+    C --> E[SMTP]
+    C --> F[Groq AI]
+```
 
 ---
 
-## Prérequis
+## Démarrage rapide
 
-- **Node.js** ≥ 18
-- **PostgreSQL** ≥ 14
-- **npm** (backend) + **bun** (frontend)
-
----
-
-## Backend (`Gestion-Formation-Back/`)
-
-### Installation
+### Backend
 
 ```bash
 cd Gestion-Formation-Back
 npm install
 cp .env.example .env
+npm run start:dev
 ```
 
-### Configuration
+> Serveur démarré sur **http://localhost:3001**
 
-Éditer `.env` :
-```
-DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=postgres
-DB_PASSWORD=postgres
-DB_DATABASE=gestion_formations
-JWT_SECRET=votre_secret
-JWT_REFRESH_SECRET=votre_refresh_secret
-```
-
-### Lancement
-
-```bash
-npm run start:dev          # développement (port 3001)
-npm run build              # production
-```
-
-### Peupler la base
-
-```bash
-npx ts-node src/seed/seed.ts
-```
-
-Crée 3 utilisateurs (email : `admin@formapro.fr`, `formateur@formapro.fr`, `participant@formapro.fr`, mot de passe : `admin123`, `formateur123`, `participant123`).
-
----
-
-## Frontend (`Gestion-Formation-Front/`)
-
-### Installation
+### Frontend
 
 ```bash
 cd Gestion-Formation-Front
 bun install
+bun run dev
 ```
 
-### Configuration
+> Application accessible sur **http://localhost:8081**
 
-Créer un fichier `.env` :
-```
-VITE_API_URL=http://localhost:3001/api
-```
-
-### Lancement
+### Seed
 
 ```bash
-bun run dev                 # développement (port 8081)
-bun run build               # production
-bun run lint                # ESLint
-bun run format              # Prettier
+cd Gestion-Formation-Back
+npx ts-node src/seed/seed.ts
 ```
+
+| Rôle | Email | Mot de passe |
+|---|---|---|
+| Admin | `admin@formapro.fr` | `admin123` |
+| Formateur | `formateur@formapro.fr` | `formateur123` |
+| Participant | `participant@formapro.fr` | `participant123` |
 
 ---
 
 ## Fonctionnalités
 
+<div align="center">
+
 | Module | Description |
 |---|---|
-| Authentification | Login, refresh token, protection par rôle (Admin, Cabinet, Formateur, Participant, Employé) |
-| Formations | CRUD, upload d'image et supports, clonage cabinet → plateforme |
-| Sessions | Planification, assignation formateurs/participants/employés, clonage |
-| Inscriptions | Paiement (cash), confirmation, historique |
-| Évaluations | Grille détaillée (10 critères), vérification doublon, KPI |
-| Présences | Pointage par date, statut formation/cantine, justificatifs |
-| Certificats | Génération PDF avec QR code, signature électronique |
-| Documents | Convention, feuille d'émargement, contrat formateur — signature électronique multi-rôle |
-| Notifications | In-app + email (SMTP optionnel, log console si non configuré) |
-| Chatbot IA | Agent Groq pour assistance admin (création, stats, KPI) |
-| Tableau de bord | KPI (taux satisfaction, participation, évaluations) |
-| Recherche globale | ⌘K / Ctrl+K — command palette multi-entité |
-| Load testing | Script k6 inclus (`load-test.js`) |
+| <img src="https://img.shields.io/badge/-🔐-gray?style=flat-square"/> **Authentification** | Login, refresh token, protection RBAC (5 rôles) |
+| <img src="https://img.shields.io/badge/-📚-gray?style=flat-square"/> **Formations** | CRUD complet, upload images/supports, clonage cabinet → plateforme |
+| <img src="https://img.shields.io/badge/-📅-gray?style=flat-square"/> **Sessions** | Planification, assignation multi-rôle, clonage |
+| <img src="https://img.shields.io/badge/-💳-gray?style=flat-square"/> **Inscriptions** | Paiement, confirmation, historique |
+| <img src="https://img.shields.io/badge/-⭐-gray?style=flat-square"/> **Évaluations** | Grille 10 critères, doublon, KPI temps réel |
+| <img src="https://img.shields.io/badge/-📍-gray?style=flat-square"/> **Présences** | Pointage par date, statut formation/cantine |
+| <img src="https://img.shields.io/badge/-📜-gray?style=flat-square"/> **Certificats** | PDF avec QR code, signature électronique |
+| <img src="https://img.shields.io/badge/-📄-gray?style=flat-square"/> **Documents** | Convention, émargement, contrat — signature multi-rôle |
+| <img src="https://img.shields.io/badge/-🔔-gray?style=flat-square"/> **Notifications** | In-app + email (SMTP optionnel) |
+| <img src="https://img.shields.io/badge/-🤖-gray?style=flat-square"/> **Chatbot IA** | Agent Groq pour assistance administrative |
+| <img src="https://img.shields.io/badge/-📊-gray?style=flat-square"/> **KPI Dashboard** | Satisfaction, participation, évaluations |
+| <img src="https://img.shields.io/badge/-🔍-gray?style=flat-square"/> **Recherche globale** | ⌘K / Ctrl+K — command palette multi-entité |
+| <img src="https://img.shields.io/badge/-🧪-gray?style=flat-square"/> **Load testing** | Script k6 inclus |
+
+</div>
 
 ---
 
@@ -113,33 +126,62 @@ bun run format              # Prettier
 
 Préfixe : `/api`
 
-Principaux endpoints :
+### Authentification
 
 ```
-GET    /formations          # Catalogue public
-POST   /formations          # Création (admin/cabinet)
-GET    /sessions            # Sessions (auth requis)
-POST   /auth/login          # Connexion
-POST   /auth/refresh        # Rafraîchir token
-GET    /users/participants  # Participants
-GET    /users/cabinets      # Cabinets (admin)
-GET    /formateurs          # Formateurs
-GET    /employes            # Employés
-POST   /inscriptions        # Inscription à une session
-GET    /evaluations         # Évaluations (filtrées)
-POST   /chatbot/message     # Agent IA
+POST /api/auth/login        → { access_token, refresh_token }
+POST /api/auth/refresh      → { access_token, refresh_token }
+PATCH /api/auth/profile     → Mise à jour profil
+```
+
+### Catalogue & Formations
+
+```
+GET    /api/formations           → Catalogue public
+GET    /api/formations/:id       → Détail formation
+POST   /api/formations           → Création (admin / cabinet)
+PATCH  /api/formations/:id       → Modification
+DELETE /api/formations/:id       → Suppression
+```
+
+### Sessions
+
+```
+GET    /api/sessions             → Liste (auth requis)
+POST   /api/sessions             → Création
+PATCH  /api/sessions/:id         → Modification
+DELETE /api/sessions/:id         → Suppression
+```
+
+### Utilisateurs
+
+```
+GET    /api/users/participants   → Participants
+GET    /api/users/cabinets       → Cabinets (admin)
+GET    /api/formateurs           → Formateurs
+GET    /api/employes             → Employés
+PATCH  /api/users/:id            → Modifier / activer / désactiver
 ```
 
 ---
 
-## Scripts utiles
+## Scripts
 
 ```bash
+# Backend
+cd Gestion-Formation-Back
+npm run start:dev       # Développement
+npm run build           # Production
+
+# Frontend
+cd Gestion-Formation-Front
+bun run dev             # Développement
+bun run build           # Production
+bun run lint            # ESLint
+bun run format          # Prettier
+
 # Load test (k6)
 k6 run load-test.js
-
-# Seed
-cd Gestion-Formation-Back && npx ts-node src/seed/seed.ts
 ```
 
 ---
@@ -148,17 +190,44 @@ cd Gestion-Formation-Back && npx ts-node src/seed/seed.ts
 
 ```
 stir-stage/
-├── Gestion-Formation-Back/       # NestJS (CommonJS)
+│
+├── Gestion-Formation-Back/          # NestJS — CommonJS
 │   ├── src/
-│   │   ├── modules/              # 17 modules feature
-│   │   ├── entities/             # Entités TypeORM
-│   │   ├── common/               # Enums, helpers
-│   │   └── seed/                 # Seed script
-│   └── uploads/                  # Fichiers uploadés
-├── Gestion-Formation-Front/      # TanStack Start (ESM)
+│   │   ├── modules/                 # 17 modules métier
+│   │   │   ├── auth/                # JWT, guards
+│   │   │   ├── formation/           # CRUD formations
+│   │   │   ├── session/             # CRUD sessions
+│   │   │   ├── inscription/         # Paiements
+│   │   │   ├── evaluation/          # Évaluations
+│   │   │   ├── presence/            # Présences
+│   │   │   ├── certificate/         # Certificats PDF
+│   │   │   ├── document/            # Documents signés
+│   │   │   ├── signature/           # Signatures électroniques
+│   │   │   ├── notification/        # Notifications in-app
+│   │   │   ├── mail/                # Service email
+│   │   │   ├── chatbot/             # IA Groq
+│   │   │   └── ...
+│   │   ├── entities/                # Entités TypeORM
+│   │   ├── common/                  # Enums, helpers
+│   │   └── seed/                    # Script de seed
+│   └── uploads/                     # Fichiers uploadés
+│
+├── Gestion-Formation-Front/         # TanStack Start — ESM
 │   ├── src/
-│   │   ├── routes/               # File-based routing
-│   │   ├── components/           # UI components
-│   │   └── lib/api/              # API client
-└── load-test.js                  # k6 load test
+│   │   ├── routes/                  # File-based routing
+│   │   ├── components/              # Composants shadcn/ui
+│   │   └── lib/api/                 # Client API typé
+│   └── public/
+│
+└── load-test.js                     # k6 — test de charge
 ```
+
+---
+
+<div align="center">
+  <br/>
+  <p>
+    <img src="https://img.shields.io/badge/built_with-❤️-0a7c6e?style=for-the-badge"/>
+  </p>
+  <br/>
+</div>
